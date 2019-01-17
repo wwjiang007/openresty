@@ -228,7 +228,7 @@ for my $opt (@ARGV) {
     } elsif ($opt eq '--with-debug') {
         $resty_opts{debug} = 1;
 
-    } elsif ($opt eq '--help') {
+    } elsif ($opt eq '--help' || $opt eq '-h') {
         usage 0;
 
     } elsif ($opt =~ /^--with-cc-opt=(.*)/) {
@@ -287,6 +287,23 @@ for my $opt (@ARGV) {
         $resty_opts{no_http_ssl} = 1;
         $resty_opts{no_http_encrypted_session} = 1;
 
+    } elsif ($opt eq '--with-stream_ssl_module') {
+        $resty_opts{stream_ssl} = 1;
+        push @ngx_opts, $opt;
+
+    } elsif ($opt eq '--with-stream_ssl_preread_module') {
+        $resty_opts{stream_ssl_preread} = 1;
+        push @ngx_opts, $opt;
+
+    } elsif ($opt eq '--without-stream') {
+        $resty_opts{no_stream} = 1;
+        $resty_opts{no_stream_ssl} = 1;
+        $resty_opts{no_stream_ssl_preread} = 1;
+        $resty_opts{no_stream_lua} = 1;
+
+    } elsif ($opt eq '--without-stream_ssl_module') {
+        $resty_opts{no_stream_ssl} = 1;
+
     } elsif ($opt =~ /^--add-module=(.*)/) {
 
         my $mod_path = File::Spec->rel2abs($1);
@@ -341,7 +358,14 @@ if ($platform ne 'msys') {
 my $resty_opts = build_resty_opts(\%resty_opts);
 
 if (@ngx_rpaths) {
-    unshift @ngx_ld_opts, "-Wl,-rpath," . join(":", @ngx_rpaths);
+    if ($platform eq 'macosx') {
+        for (@ngx_rpaths) {
+            unshift @ngx_ld_opts, "-Wl,-rpath,$_";
+        }
+
+    } else {
+        unshift @ngx_ld_opts, "-Wl,-rpath," . join ":", @ngx_rpaths;
+    }
 }
 
 my $ld_opts = '';
@@ -481,7 +505,28 @@ _END_
     }
 
     if (!$opts->{no_stream_lua}) {
-        push @ngx_opts, '--with-stream', '--with-stream_ssl_module';
+        push @ngx_opts, '--with-stream';
+    }
+
+    if ($opts->{no_stream_ssl} && $opts->{stream_ssl}) {
+        die "--with-stream_ssl_module conflicts with --without-stream_ssl_module.",
+            "\n";
+    }
+
+    if (!$opts->{no_stream}
+        && ! $opts->{no_stream_ssl}
+        && ! $opts->{stream_ssl})
+    {
+        $opts->{stream_ssl} = 1;
+        push @ngx_opts, '--with-stream_ssl_module';
+    }
+
+    if (!$opts->{no_stream}
+        && ! $opts->{no_stream_ssl_preread}
+        && ! $opts->{stream_ssl_preead})
+    {
+        $opts->{stream_ssl_preread} = 1;
+        push @ngx_opts, '--with-stream_ssl_preread_module';
     }
 
     if (!$opts->{lua}
@@ -1227,6 +1272,7 @@ _EOC_
     $msg .= <<'_EOC_';
   --without-ngx_devel_kit_module     disable ngx_devel_kit_module
   --without-http_ssl_module          disable ngx_http_ssl_module
+  --without-stream_ssl_module        disable ngx_stream_ssl_module
 
 _EOC_
 
@@ -1372,9 +1418,12 @@ Options directly inherited from nginx
   --without-mail_imap_module         disable ngx_mail_imap_module
   --without-mail_smtp_module         disable ngx_mail_smtp_module
 
-  --with-stream                      enable TCP/UDP proxy module
+  --without-stream                   disable TCP/UDP proxy module
+  --without-stream_ssl_module        disable ngx_stream_ssl_module
+
+  --with-stream                      enable TCP/UDP proxy module (default on)
   --with-stream=dynamic              enable dynamic TCP/UDP proxy module
-  --with-stream_ssl_module           enable ngx_stream_ssl_module
+  --with-stream_ssl_module           enable ngx_stream_ssl_module (default on)
   --with-stream_realip_module        enable ngx_stream_realip_module
   --with-stream_geoip_module         enable ngx_stream_geoip_module
   --with-stream_geoip_module=dynamic enable dynamic ngx_stream_geoip_module

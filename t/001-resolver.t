@@ -68,12 +68,14 @@ parsed a resolver: "
 nameser 8.8.8.8"
 --- request
 GET /t
---- response_body
-failed to connect to openresty.org: no resolver defined to resolve "openresty.org"
+--- must_die
+--- error_log
+no name servers defined
 --- no_error_log
 [error]
 [crit]
 parsed a resolver: "
+--- skip_nginx: 5: < 1.15.1
 
 
 
@@ -99,12 +101,14 @@ parsed a resolver: "
 nameser 8.8.8.8"
 --- request
 GET /t
---- response_body
-failed to connect to openresty.org: no resolver defined to resolve "openresty.org"
+--- must_die
+--- error_log
+no name servers defined
 --- no_error_log
 [error]
 [crit]
 parsed a resolver: "
+--- skip_nginx: 5: < 1.15.1
 
 
 
@@ -284,7 +288,6 @@ successfully connected to openresty.org
 parsed a resolver: "8.8.8.8"
 parsed a resolver: "8.8.4.4"
 parsed a resolver: "208.67.222.222"
-
 
 
 

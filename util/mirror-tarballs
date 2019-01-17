@@ -65,6 +65,10 @@ if [ "$answer" = "Y" ]; then
     echo "$info_txt applying the resolver_conf_parsing patch for nginx"
     patch -p1 < $root/patches/nginx-$main_ver-resolver_conf_parsing.patch || exit 1
     echo
+
+    echo "$info_txt applying the daemon_destroy_pool patch for nginx"
+    patch -p1 < $root/patches/nginx-$main_ver-daemon_destroy_pool.patch || exit 1
+    echo
 fi
 
 answer=`$root/util/ver-ge "$main_ver" 1.5.12`
@@ -450,7 +454,7 @@ mv openresty-xss-nginx-module-* xss-nginx-module-$ver || exit 1
 
 #################################
 
-ver=0.3.0
+ver=0.3.1rc1
 $root/util/get-tarball "https://github.com/simplresty/ngx_devel_kit/tarball/v$ver" -O ngx_devel_kit-$ver.tar.gz
 tar -xzf ngx_devel_kit-$ver.tar.gz || exit 1
 mv simplresty-ngx_devel_kit-* ngx_devel_kit-$ver || exit 1
@@ -492,10 +496,10 @@ mv openresty-drizzle-nginx-module-* drizzle-nginx-module-$ver || exit 1
 
 #################################
 
-ver=0.10.13
-$root/util/get-tarball "https://github.com/openresty/lua-nginx-module/tarball/v$ver" -O lua-nginx-module-$ver.tar.gz || exit 1
+ver=0.10.14rc3
+$root/util/get-tarball "https://github.com/openresty/lua-nginx-module/archive/v$ver.tar.gz" -O lua-nginx-module-$ver.tar.gz || exit 1
 tar -xzf lua-nginx-module-$ver.tar.gz || exit 1
-mv openresty-lua-nginx-module-* ngx_lua-$ver || exit 1
+mv lua-nginx-module-$ver ngx_lua-$ver || exit 1
 
 #################################
 
@@ -506,7 +510,7 @@ mv openresty-lua-upstream-nginx-module-* ngx_lua_upstream-$ver || exit 1
 
 #################################
 
-ver=0.0.5
+ver=0.0.6rc3
 $root/util/get-tarball "https://github.com/openresty/stream-lua-nginx-module/tarball/v$ver" -O stream-lua-nginx-module-$ver.tar.gz || exit 1
 tar -xzf stream-lua-nginx-module-$ver.tar.gz || exit 1
 mv openresty-stream-lua-nginx-module-* ngx_stream_lua-$ver || exit 1
@@ -591,7 +595,7 @@ mv openresty-ngx_postgres-* ngx_postgres-$ver || exit 1
 
 #################################
 
-ver=0.2rc3
+ver=0.2
 $root/util/get-tarball "https://github.com/FRiCKLE/ngx_coolkit/tarball/$ver" -O ngx_coolkit-$ver.tar.gz || exit 1
 tar -xzf ngx_coolkit-$ver.tar.gz || exit 1
 mv FRiCKLE-ngx_coolkit-* ngx_coolkit-$ver || exit 1
@@ -605,7 +609,7 @@ mv openresty-redis2-nginx-module-* redis2-nginx-module-$ver || exit 1
 
 #################################
 
-ver=0.21
+ver=0.22rc7
 $root/util/get-tarball "https://github.com/openresty/resty-cli/tarball/v$ver" -O resty-cli-$ver.tar.gz || exit 1
 tar -xzf resty-cli-$ver.tar.gz || exit 1
 mv openresty-resty-cli-* resty-cli-$ver || exit 1
@@ -646,7 +650,7 @@ mv openresty-opm-* opm-$ver || exit 1
 
 #################################
 
-ver=2.1-20180420
+ver=2.1-20190115
 $root/util/get-tarball "https://github.com/openresty/luajit2/archive/v$ver.tar.gz" -O "LuaJIT-$ver.tar.gz" || exit 1
 tar -xzf LuaJIT-$ver.tar.gz || exit 1
 mv luajit2-* LuaJIT-$ver || exit 1
@@ -667,7 +671,7 @@ cd .. || exit 1
 
 #################################
 
-ver=2.1.0.6
+ver=2.1.0.7rc1
 $root/util/get-tarball "https://github.com/openresty/lua-cjson/archive/$ver.tar.gz" -O "lua-cjson-$ver.tar.gz" || exit 1
 tar -xzf lua-cjson-$ver.tar.gz || exit 1
 #cd lua-cjson-$ver || exit 1
@@ -726,7 +730,7 @@ cd ..
 
 #################################
 
-ver=0.26
+ver=0.27rc1
 $root/util/get-tarball "https://github.com/openresty/lua-resty-redis/tarball/v$ver" -O "lua-resty-redis-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-redis-$ver.tar.gz || exit 1
 mv openresty-lua-resty-redis-* lua-resty-redis-$ver || exit 1
@@ -738,7 +742,7 @@ mv openresty-lua-resty-redis-* lua-resty-redis-$ver || exit 1
 
 #################################
 
-ver=0.20
+ver=0.21
 $root/util/get-tarball "https://github.com/openresty/lua-resty-mysql/tarball/v$ver" -O "lua-resty-mysql-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-mysql-$ver.tar.gz || exit 1
 mv openresty-lua-resty-mysql-* lua-resty-mysql-$ver || exit 1
@@ -750,7 +754,7 @@ cd ..
 
 #################################
 
-ver=0.05
+ver=0.06rc1
 $root/util/get-tarball "https://github.com/openresty/lua-resty-limit-traffic/tarball/v$ver" -O "lua-resty-limit-traffic-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-limit-traffic-$ver.tar.gz || exit 1
 mv openresty-lua-resty-limit-traffic-* lua-resty-limit-traffic-$ver || exit 1
@@ -786,7 +790,7 @@ cd ..
 
 #################################
 
-ver=0.06
+ver=0.07rc1
 $root/util/get-tarball "https://github.com/openresty/lua-resty-websocket/tarball/v$ver" -O "lua-resty-websocket-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-websocket-$ver.tar.gz || exit 1
 mv openresty-lua-resty-websocket-* lua-resty-websocket-$ver || exit 1
@@ -798,7 +802,7 @@ cd ..
 
 #################################
 
-ver=0.07
+ver=0.08rc1
 $root/util/get-tarball "https://github.com/openresty/lua-resty-lock/tarball/v$ver" -O "lua-resty-lock-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-lock-$ver.tar.gz || exit 1
 mv openresty-lua-resty-lock-* lua-resty-lock-$ver || exit 1
@@ -810,7 +814,7 @@ cd ..
 
 #################################
 
-ver=0.08
+ver=0.09rc1
 $root/util/get-tarball "https://github.com/openresty/lua-resty-lrucache/tarball/v$ver" -O "lua-resty-lrucache-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-lrucache-$ver.tar.gz || exit 1
 mv openresty-lua-resty-lrucache-* lua-resty-lrucache-$ver || exit 1
@@ -822,7 +826,7 @@ cd ..
 
 #################################
 
-ver=0.1.15
+ver=0.1.16rc3
 $root/util/get-tarball "https://github.com/openresty/lua-resty-core/tarball/v$ver" -O "lua-resty-core-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-core-$ver.tar.gz || exit 1
 mv openresty-lua-resty-core-* lua-resty-core-$ver || exit 1
@@ -847,6 +851,7 @@ cd ..
 #################################
 
 rm *.tar.gz
+rm *.tar.bz2
 
 cd ..
 cp $root/util/configure ./ || exit 1
@@ -886,6 +891,7 @@ fi
 cd nginx.org/ || exit 1
 hg purge --config extensions.purge= || exit 1
 find xml/en/docs -name 'ngx_http_api_module.xml' -delete
+rm xml/en/docs/njs/*
 $nginx_xml2pod xml/en/docs || exit 1
 cd $curdir || exit 1
 
