@@ -723,12 +723,11 @@ _END_
             $luajit_xcflags .= " -DLUAJIT_ENABLE_LUA52COMPAT";
         }
 
-        if (!$no_luajit_gc64
-            && $Config{"archname"} =~ /\bx86_64\b/
+        if ($no_luajit_gc64
             && (!$user_luajit_xcflags
-                || $user_luajit_xcflags !~ /-DLUAJIT_ENABLE_GC64\b/))
+                || $user_luajit_xcflags !~ /-DLUAJIT_DISABLE_GC64/))
         {
-            $luajit_xcflags .= " -DLUAJIT_ENABLE_GC64";
+            $luajit_xcflags .= " -DLUAJIT_DISABLE_GC64";
         }
 
         if (!$user_luajit_xcflags
@@ -776,6 +775,12 @@ int main(void) {
             }
         }
 
+        if ($platform eq 'macosx') {
+            # to work around a bug in the Xcode toolchain in macOS 11.15:
+            # https://github.com/openresty/homebrew-brew/issues/10
+            $luajit_xcflags .= " -fno-stack-check";
+        }
+
         if ($opts->{debug}) {
             $luajit_xcflags .= " -DLUA_USE_APICHECK -DLUA_USE_ASSERT";
 
@@ -820,12 +825,17 @@ int main(void) {
 
         if ($platform eq 'macosx') {
             my $v = $ENV{MACOSX_DEPLOYMENT_TARGET};
-            if (!defined $v || $v !~ /^\d+\.\d+$/) {
+            if (!defined($v) || $v !~ /^\d+\.\d+$/) {
                 $v = `sw_vers -productVersion`;
-                if (defined $v && $v =~ /^\s*(\d+\.\d+)/) {
-                    $ENV{MACOSX_DEPLOYMENT_TARGET} = $1;
+                chomp $v;
+                if (defined($v) && $v =~ /^\s*(\d+\.\d+)/) {
+                    $v = $1;
+                    $ENV{MACOSX_DEPLOYMENT_TARGET} = $v;
                     #warn "MACOSX_DEPLOYMENT_TARGET = $1";
                 }
+            }
+            if ($v) {
+                $extra_opts .= " MACOSX_DEPLOYMENT_TARGET='$v'";
             }
         }
 
@@ -955,21 +965,57 @@ int main(void) {
         $lualib_prefix = File::Spec->catfile($prefix, "lualib");
         my $site_lualib_prefix = File::Spec->catfile($prefix, "site/lualib");
 
-        my $ngx_lua_dir = auto_complete 'ngx_lua';
-
-        open my $in, ">>$ngx_lua_dir/config" or
-            die "Cannot open $ngx_lua_dir/config for appending: $!\n";
-
         {
-            print $in <<"_EOC_";
+            my $ngx_lua_dir = auto_complete 'ngx_lua';
 
-ngx_lua_dquote='"'
-CFLAGS="\$CFLAGS -DLUA_DEFAULT_PATH='\${ngx_lua_dquote}$site_lualib_prefix/?.ljbc;$site_lualib_prefix/?/init.ljbc;$lualib_prefix/?.ljbc;$lualib_prefix/?/init.ljbc;$site_lualib_prefix/?.lua;$site_lualib_prefix/?/init.lua;$lualib_prefix/?.lua;$lualib_prefix/?/init.lua\$ngx_lua_dquote'"
-CFLAGS="\$CFLAGS -DLUA_DEFAULT_CPATH='\${ngx_lua_dquote}$site_lualib_prefix/?.so;$lualib_prefix/?.so\$ngx_lua_dquote'"
+            my $outfile = "$ngx_lua_dir/config";
+
+            open my $in, ">>$outfile" or
+                die "Cannot open $outfile for appending: $!\n";
+
+            {
+                print $in <<"_EOC_";
+
+echo '
+#ifndef LUA_DEFAULT_PATH
+#define LUA_DEFAULT_PATH "$site_lualib_prefix/?.ljbc;$site_lualib_prefix/?/init.ljbc;$lualib_prefix/?.ljbc;$lualib_prefix/?/init.ljbc;$site_lualib_prefix/?.lua;$site_lualib_prefix/?/init.lua;$lualib_prefix/?.lua;$lualib_prefix/?/init.lua"
+#endif
+
+#ifndef LUA_DEFAULT_CPATH
+#define LUA_DEFAULT_CPATH "$site_lualib_prefix/?.so;$lualib_prefix/?.so"
+#endif
+' >> "\$ngx_addon_dir/src/ngx_http_lua_autoconf.h"
 _EOC_
+            }
+
+            close $in;
         }
 
-        close $in;
+        {
+            my $ngx_stream_lua_dir = auto_complete 'ngx_stream_lua';
+
+            my $outfile = "$ngx_stream_lua_dir/config";
+
+            open my $in, ">>$outfile" or
+                die "Cannot open $outfile for appending: $!\n";
+
+            {
+                print $in <<"_EOC_";
+
+echo '
+#ifndef LUA_DEFAULT_PATH
+#define LUA_DEFAULT_PATH "$site_lualib_prefix/?.ljbc;$site_lualib_prefix/?/init.ljbc;$lualib_prefix/?.ljbc;$lualib_prefix/?/init.ljbc;$site_lualib_prefix/?.lua;$site_lualib_prefix/?/init.lua;$lualib_prefix/?.lua;$lualib_prefix/?/init.lua"
+#endif
+
+#ifndef LUA_DEFAULT_CPATH
+#define LUA_DEFAULT_CPATH "$site_lualib_prefix/?.so;$lualib_prefix/?.so"
+#endif
+' >> "\$ngx_addon_dir/src/ngx_stream_lua_autoconf.h"
+_EOC_
+            }
+
+            close $in;
+        }
 
         unless ($opts->{no_lua_cjson}) {
             my $dir = auto_complete 'lua-cjson';
@@ -1304,8 +1350,6 @@ sub usage ($) {
   --prefix=PATH                      set the installation prefix (default to /usr/local/openresty)
 
   --with-debug                       enable debug logging
-  --with-dtrace-probes               enable dtrace USDT probes
-  --with-dtrace=PATH                 set dtrace utility pathname
 
   --with-no-pool-patch               enable the no-pool patch for debugging memory issues
 
@@ -1410,8 +1454,6 @@ Options directly inherited from nginx
   --error-log-path=PATH              set error log pathname
   --pid-path=PATH                    set nginx.pid pathname
   --lock-path=PATH                   set nginx.lock pathname
-  --tapset-prefix=PATH               set systemtap tapset directory prefix
-  --stap-nginx-path=PATH             set stap-nginx pathname
 
   --user=USER                        set non-privileged user for
                                      worker processes
@@ -1429,7 +1471,6 @@ Options directly inherited from nginx
   --with-threads                     enable thread pool support
 
   --with-file-aio                    enable file AIO support
-  --with-ipv6                        enable IPv6 support
 
   --with-http_v2_module              enable ngx_http_v2_module
   --with-http_realip_module          enable ngx_http_realip_module
@@ -1543,6 +1584,8 @@ Options directly inherited from nginx
   --add-module=PATH                  enable external module
   --add-dynamic-module=PATH          enable dynamic external module
 
+  --with-compat                      dynamic modules compatibility
+
   --with-cc=PATH                     set C compiler pathname
   --with-cpp=PATH                    set C preprocessor pathname
   --with-cc-opt=OPTIONS              set additional C compiler options
@@ -1607,7 +1650,7 @@ sub gen_makefile {
 
     print $out "install: all\n\t" . join("\n\t", @make_install_cmds) . "\n\n";
 
-    print $out "clean:\n\trm -rf build\n";
+    print $out "clean:\n\trm -rf build *.exe *.dll openresty-*\n";
 
     close $out;
 }
